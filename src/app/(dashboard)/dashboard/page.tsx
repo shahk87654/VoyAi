@@ -203,14 +203,18 @@ export default function DashboardPage() {
           {/* Features preview */}
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { icon: '✈️', text: 'Real-time flight search' },
-              { icon: '🏨', text: 'Best hotel deals' },
-              { icon: '🗺️', text: 'AI itineraries' },
+              { icon: '✈️', text: 'Real-time flight search', link: '/flights' },
+              { icon: '🏨', text: 'Best hotel deals', link: '/hotels' },
+              { icon: '🗺️', text: 'AI itineraries', link: '/builder' },
             ].map((item, i) => (
-              <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--color-accent)]/30 transition-colors text-sm text-[var(--color-text-muted)]">
-                <span className="text-xl mr-2">{item.icon}</span>
+              <Link
+                key={i}
+                href={item.link}
+                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--color-accent)]/50 transition-all duration-200 hover:shadow-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] group cursor-pointer"
+              >
+                <span className="text-xl mr-2 inline-block group-hover:scale-110 transition-transform">{item.icon}</span>
                 {item.text}
-              </div>
+              </Link>
             ))}
           </div>
         </div>
