@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
     // Get the trip itinerary
     const trip = await prisma.trip.findUnique({
       where: { id: tripId },
-      include: { itinerary: true },
     })
 
     if (!trip) {
@@ -29,7 +28,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const itineraryText = itinerary || JSON.stringify(trip.itinerary)
+    const itineraryText = itinerary || (trip.aiItinerary ? JSON.stringify(trip.aiItinerary) : '')
 
     // Use Claude to refine the itinerary
     const response = await client.messages.create({

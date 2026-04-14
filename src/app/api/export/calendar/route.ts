@@ -81,11 +81,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse itinerary data
-    const itinerary = typeof trip.itinerary === 'string' 
-      ? JSON.parse(trip.itinerary) 
-      : trip.itinerary
+    const itinerary = typeof trip.aiItinerary === 'string' 
+      ? JSON.parse(trip.aiItinerary as string) 
+      : trip.aiItinerary
 
-    const tripDays = Array.isArray(itinerary) ? itinerary : itinerary.days || []
+    const tripDays = Array.isArray(itinerary) ? itinerary : (itinerary as any)?.days || []
 
     // Generate iCal format
     const icalContent = generateICal(trip.destination, tripDays)

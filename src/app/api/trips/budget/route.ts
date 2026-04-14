@@ -52,11 +52,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate budget summary
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
+    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + e.amount, 0)
     const byCategory: Record<string, number> = {}
     const byPerson: Record<string, number> = {}
 
-    expenses.forEach((expense) => {
+    expenses.forEach((expense: any) => {
       byCategory[expense.category] = (byCategory[expense.category] || 0) + expense.amount
       byPerson[expense.paidBy] = (byPerson[expense.paidBy] || 0) + expense.amount
     })

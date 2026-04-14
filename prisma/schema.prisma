@@ -58,6 +58,8 @@ model Trip {
   days        TripDay[]
   flights     TripFlight[]
   hotels      TripHotel[]
+  shares      TripShare[]
+  chatMessages TripChatMessage[]
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -154,4 +156,62 @@ model SavedHotel {
   createdAt DateTime @default(now())
 
   @@map("saved_hotels")
+}
+
+model FlightPriceAlert {
+  id              String    @id @default(cuid())
+  email           String
+  origin          String
+  destination     String
+  targetPrice     Float
+  departureDate   DateTime?
+  isActive        Boolean   @default(true)
+  lastNotified    DateTime?
+  lowestPrice     Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+  @@map("flight_price_alerts")
+}
+
+model TripExpense {
+  id          String    @id @default(cuid())
+  tripId      String
+  category    String    // "food", "transport", "accommodation", "entertainment", "shopping", "activities", "other"
+  amount      Float
+  description String?
+  paidBy      String    // email or name of person who paid
+  splitWith   String[]  @default([]) // list of people to split with
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tripId])
+  @@map("trip_expenses")
+}
+
+model TripShare {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  shareToken  String    @unique
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([shareToken])
+  @@map("trip_shares")
+}
+
+model TripChatMessage {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  role        String    // "user" or "assistant"
+  content     String
+  createdAt   DateTime  @default(now())
+
+  @@index([tripId])
+  @@map("trip_chat_messages")
 }

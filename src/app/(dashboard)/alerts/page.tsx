@@ -138,7 +138,7 @@ export default function FlightAlertsPage() {
               value={newAlert.origin}
               onChange={(e) => setNewAlert({ ...newAlert, origin: e.target.value.toUpperCase() })}
               className="w-full px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:border-blue-500 focus:outline-none"
-              maxLength="3"
+              maxLength={3}
             />
           </div>
 
@@ -150,7 +150,7 @@ export default function FlightAlertsPage() {
               value={newAlert.destination}
               onChange={(e) => setNewAlert({ ...newAlert, destination: e.target.value.toUpperCase() })}
               className="w-full px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:border-blue-500 focus:outline-none"
-              maxLength="3"
+              maxLength={3}
             />
           </div>
 
