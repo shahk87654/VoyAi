@@ -5,6 +5,7 @@ VoyAI is an intelligent travel planning SaaS application that uses AI to create 
 ## Features 🚀
 
 - **AI-Powered Trip Planning**: Describe where you want to go, and let Claude AI create a detailed day-by-day itinerary
+- **Cheapest Flights Finder**: Search real-time flight prices across 6 popular routes using SerpAPI
 - **Real-Time Flight Search**: Integration with SerpAPI for live flight prices and availability
 - **Hotel Search & Deals**: Booking.com integration for finding the best accommodation rates
 - **Interactive Maps**: Mapbox-powered maps to visualize your trip destinations
@@ -76,13 +77,15 @@ Edit `.env.local` with your API keys:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_KEY=your_service_key
+SUPABASE_KEY=your_service_key
 
 # AI
 ANTHROPIC_API_KEY=your_claude_api_key
 
-# Search APIs
-SERPAPI_API_KEY=your_serpapi_key
+# Flight Search (uses SerpAPI's Google Flights)
+SERPAPI_KEY=your_serpapi_key
+
+# Hotel Search
 BOOKING_API_KEY=your_booking_key
 
 # Maps
@@ -96,6 +99,14 @@ STRIPE_WEBHOOK_SECRET=your_webhook_secret
 # Redis (optional, for caching)
 REDIS_URL=your_redis_url
 ```
+
+To get these keys:
+- **Supabase**: https://supabase.com/ (Settings > API)
+- **Anthropic**: https://console.anthropic.com/
+- **SerpAPI**: https://serpapi.com/ (for real-time flight data)
+- **Booking.com**: https://booking-api.developer.booking.com/
+- **Mapbox**: https://account.mapbox.com/
+- **Stripe**: https://dashboard.stripe.com/
 
 4. **Set up the database**
 ```bash
@@ -164,6 +175,14 @@ public/                    # Static assets
 
 ## Key Features in Detail 🎯
 
+### Cheapest Flights Finder
+- Real-time searches across 6 popular flight routes (LAX→NYC, LAX→MIA, LAX→ORD, and more)
+- Uses SerpAPI's Google Flights data for live pricing
+- Sort by lowest price, best savings, or soonest departure
+- Caches results for 15 minutes to optimize performance
+- Shows airline, departure/arrival times, duration, and stops
+- One-click booking integration
+
 ### AI Trip Planning
 - Send a natural language description of your trip
 - Claude AI generates a complete day-by-day itinerary
@@ -210,6 +229,7 @@ public/                    # Static assets
 
 ### Search
 - `POST /api/search/flights` - Search flights
+- `GET /api/search/cheapest-flights` - Find cheapest flights across popular routes
 - `POST /api/search/hotels` - Search hotels
 
 ### Export

@@ -1,97 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { Plane, TrendingDown, Calendar, MapPin, Users,ChevronDown, Zap, Sparkles } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plane, TrendingDown, Calendar, MapPin, Users, ChevronDown, Zap, Sparkles, Loader } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-
-interface CheapestFlight {
-  date: string
-  from: string
-  to: string
-  price: number
-  airline: string
-  duration: string
-  savings: number
-}
-
-// Mock data for cheapest flights
-const CHEAPEST_FLIGHTS: CheapestFlight[] = [
-  {
-    date: '2026-04-20',
-    from: 'LAX',
-    to: 'NYC',
-    price: 149,
-    airline: 'Southwest',
-    duration: '5h 30m',
-    savings: 120,
-  },
-  {
-    date: '2026-04-22',
-    from: 'LAX',
-    to: 'MIA',
-    price: 89,
-    airline: 'Spirit',
-    duration: '5h 10m',
-    savings: 180,
-  },
-  {
-    date: '2026-04-25',
-    from: 'LAX',
-    to: 'ORD',
-    price: 119,
-    airline: 'United',
-    duration: '4h 45m',
-    savings: 95,
-  },
-  {
-    date: '2026-04-28',
-    from: 'LAX',
-    to: 'BOS',
-    price: 199,
-    airline: 'JetBlue',
-    duration: '5h 8m',
-    savings: 150,
-  },
-  {
-    date: '2026-05-01',
-    from: 'SFO',
-    to: 'SEA',
-    price: 59,
-    airline: 'Alaska',
-    duration: '1h 25m',
-    savings: 40,
-  },
-  {
-    date: '2026-05-05',
-    from: 'DEN',
-    to: 'LAS',
-    price: 79,
-    airline: 'Frontier',
-    duration: '1h 40m',
-    savings: 65,
-  },
-]
+import { Flight } from '@/types/flight'
 
 export default function FlightsPage() {
   const [sortBy, setSortBy] = useState<'price' | 'savings' | 'date'>('price')
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [flights, setFlights] = useState<Flight[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const sortedFlights = [...CHEAPEST_FLIGHTS].sort((a, b) => {
-    switch (sortBy) {
-      case 'price':
-        return a.price - b.price
-      case 'savings':
-        return b.savings - a.savings
-      case 'date':
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
-      default:
-        return 0
+  useEffect(() => {
+    const fetchCheapestFlights = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await fetch(`/api/search/cheapest-flights?sort=${sortBy}`)
+        if (!res.ok) throw new Error('Failed to fetch flights')
+        const data = await res.json()
+        setFlights(data)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load cheapest flights'
+        setError(message)
+        toast.error(message)
+      } finally {
+        setLoading(false)
+      }
     }
-  })
 
-  const handleBooking = (flight: CheapestFlight) => {
-    toast.success(`Booking ${flight.from} → ${flight.to} for $${flight.price}!`)
+    fetchCheapestFlights()
+  }, [sortBy])
+
+  const handleBooking = (flight: Flight) => {
+    toast.success(`Booking ${flight.originCode} → ${flight.destinationCode} for $${flight.price}!`)
+  }
+
+  const formatTime = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return dateString
+    }
+  }
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${mins}m`
   }
 
   return (
@@ -140,71 +97,120 @@ export default function FlightsPage() {
           </div>
         </div>
         <div className="text-sm text-[var(--color-text-muted)]">
-          Showing <span className="font-bold text-[var(--color-accent)]">{sortedFlights.length}</span> deals
+          {loading ? 'Loading...' : `Showing ${flights.length} deals`}
         </div>
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+          <p className="font-semibold">Unable to load flights</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4">
+            </div>
+            <p className="text-[var(--color-text-muted)]">Searching for cheapest flights...</p>
+          </div>
+        </div>
+      )}
+
       {/* Flights Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sortedFlights.map((flight, idx) => (
-          <div
-            key={idx}
-            className="group bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] hover:border-blue-500/50 transition-all duration-300 overflow-hidden hover:shadow-lg"
-          >
-            {/* Flight Card Content */}
-            <div className="p-6">
-              {/* Route and Price */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl font-display font-bold text-[var(--color-text)]">
-                      {flight.from}
-                    </span>
-                    <Plane className="w-5 h-5 text-blue-400" />
-                    <span className="text-2xl font-display font-bold text-[var(--color-text)]">
-                      {flight.to}
+      {!loading && flights.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {flights.map((flight) => (
+            <div
+              key={flight.id}
+              className="group bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] hover:border-blue-500/50 transition-all duration-300 overflow-hidden hover:shadow-lg"
+            >
+              {/* Flight Card Content */}
+              <div className="p-6">
+                {/* Route and Price */}
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl font-display font-bold text-[var(--color-text)]">
+                        {flight.originCode}
+                      </span>
+                      <Plane className="w-5 h-5 text-blue-400" />
+                      <span className="text-2xl font-display font-bold text-[var(--color-text)]">
+                        {flight.destinationCode}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {new Date(flight.departure).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-display font-bold text-blue-500">${flight.price}</div>
+                    <div className="flex items-center gap-1 text-xs text-emerald-500 font-semibold mt-1">
+                      <TrendingDown className="w-4 h-4" />
+                      Best deal
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-3 mb-4 pb-4 border-b border-[var(--color-border)]">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Plane className="w-4 h-4 text-[var(--color-text-muted)]" />
+                    <span className="text-[var(--color-text-muted)]">{flight.airline}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Calendar className="w-4 h-4 text-[var(--color-text-muted)]" />
+                    <span className="text-[var(--color-text-muted)]">
+                      {formatTime(flight.departure)} → {formatTime(flight.arrival)}
                     </span>
                   </div>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    {new Date(flight.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-display font-bold text-blue-500">${flight.price}</div>
-                  <div className="flex items-center gap-1 text-xs text-emerald-500 font-semibold mt-1">
-                    <TrendingDown className="w-4 h-4" />
-                    Save ${flight.savings}
+                  <div className="flex items-center gap-3 text-sm">
+                    <MapPin className="w-4 h-4 text-[var(--color-text-muted)]" />
+                    <span className="text-[var(--color-text-muted)]">
+                      {formatDuration(flight.durationMinutes)} • {flight.stops} stop{flight.stops !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Details */}
-              <div className="space-y-3 mb-4 pb-4 border-b border-[var(--color-border)]">
-                <div className="flex items-center gap-3 text-sm">
-                  <Plane className="w-4 h-4 text-[var(--color-text-muted)]" />
-                  <span className="text-[var(--color-text-muted)]">{flight.airline}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="w-4 h-4 text-[var(--color-text-muted)]" />
-                  <span className="text-[var(--color-text-muted)]">{flight.duration}</span>
-                </div>
+                {/* Booking Button */}
+                <button
+                  onClick={() => handleBooking(flight)}
+                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 group"
+                >
+                  Book Now
+                </button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-              {/* Booking Button */}
-              <button
-                onClick={() => handleBooking(flight)}
-                className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 group"
-              >
-                Book Now
-              </button>
+      {/* Empty State */}
+      {!loading && flights.length === 0 && !error && (
+        <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-sm p-8 sm:p-12 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <Plane className="w-16 h-16 text-blue-400/50" />
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">Set up SerpAPI to see live flights</h3>
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                To enable real-time flight search, add your SerpAPI key to <code className="bg-black/20 px-2 py-1 rounded">.env.local</code>
+              </p>
+              <ol className="text-sm text-[var(--color-text-muted)] text-left inline-block">
+                <li>1. Get a free API key from <a href="https://serpapi.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">serpapi.com</a></li>
+                <li>2. Add <code className="bg-black/20 px-2 py-1 rounded">SERPAPI_KEY=your_key</code> to .env.local</li>
+                <li>3. Restart the dev server</li>
+              </ol>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* CTA Section */}
       <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-sm p-8 sm:p-12 text-center">
