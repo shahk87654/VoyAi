@@ -7,7 +7,12 @@ VoyAI is an intelligent travel planning SaaS application that uses AI to create 
 - **AI-Powered Trip Planning**: Describe where you want to go, and let Claude AI create a detailed day-by-day itinerary
 - **Cheapest Flights Finder**: Search real-time flight prices across 6 popular routes using SerpAPI
 - **Real-Time Flight Search**: Integration with SerpAPI for live flight prices and availability
+- **Flight Price Alerts**: Set target prices and get notified when flights drop below your budget
 - **Hotel Search & Deals**: Booking.com integration for finding the best accommodation rates
+- **Group Trip Budgeting**: Track expenses, split costs among travelers, and manage group finances
+- **Social Sharing Features**: Share trips with unique links, export calendars, embed itineraries
+- **AI Chat Refinement**: Refine itineraries in real-time with Claude AI chat interface
+- **Calendar Integration**: Export trips to iCal format for Google Calendar, Outlook, Apple Calendar
 - **Interactive Maps**: Mapbox-powered maps to visualize your trip destinations
 - **PDF Export**: Download your complete itinerary as a beautiful, shareable PDF
 - **Trip Management**: Save, edit, and organize multiple trips
@@ -226,13 +231,31 @@ public/                    # Static assets
 
 ### AI Planning
 - `POST /api/ai/plan` - Generate itinerary
+- `POST /api/ai/refine` - Refine itinerary with Claude (chat-based)
+- `GET /api/ai/refine` - Get chat history for trip refinement
 
 ### Search
 - `POST /api/search/flights` - Search flights
 - `GET /api/search/cheapest-flights` - Find cheapest flights across popular routes
 - `POST /api/search/hotels` - Search hotels
 
-### Export
+### Flight Price Alerts
+- `GET /api/alerts/flights` - Get user's active flight alerts
+- `POST /api/alerts/flights` - Create new flight price alert
+- `DELETE /api/alerts/flights` - Delete (disable) a flight alert
+
+### Group Trip Budgeting
+- `GET /api/trips/budget` - Get expenses and budget summary for a trip
+- `POST /api/trips/budget` - Add expense to trip budget
+
+### Social Sharing
+- `POST /api/trips/share` - Generate shareable link for trip
+- `GET /api/trips/share` - Validate and fetch shared trip (public access)
+
+### Calendar Export
+- `GET /api/export/calendar` - Export trip itinerary as iCal (.ics) file
+
+### PDF Export
 - `POST /api/export/pdf` - Export itinerary as PDF
 
 ### Authentication

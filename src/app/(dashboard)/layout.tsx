@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, Settings, Compass, Plus, LayoutDashboard, MapPin, Zap, Menu, X, Plane, Hotel } from 'lucide-react'
+import { LogOut, Settings, Compass, Plus, LayoutDashboard, MapPin, Zap, Menu, X, Plane, Hotel, Bell, DollarSign, Share2 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useState } from 'react'
 
@@ -54,6 +54,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/flights', label: 'Cheapest Flights', icon: Plane },
     { href: '/hotels', label: 'Hotel Deals', icon: Hotel },
+    { href: '/alerts', label: 'Price Alerts', icon: Bell },
+    { href: '/budget', label: 'Group Budget', icon: DollarSign },
     { href: '/dashboard/trips', label: 'My Trips', icon: MapPin },
     { href: '/builder', label: 'Plan Trip', icon: Plus },
   ]
