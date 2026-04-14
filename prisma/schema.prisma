@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  supabaseId    String    @unique
+  plan          Plan      @default(FREE)
+  stripeCustomerId String? @unique
+  stripeSubId   String?
+  tripsThisMonth Int      @default(0)
+  lastResetAt   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  trips         Trip[]
+  savedFlights  SavedFlight[]
+  savedHotels   SavedHotel[]
+
+  @@map("users")
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAMS
+}
+
+model Trip {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  destination String
+  origin      String
+  startDate   DateTime
+  endDate     DateTime
+  travelers   Int       @default(1)
+  budget      String?
+  style       String[]  // ["adventure", "food", "culture", "beach", "luxury"]
+  status      TripStatus @default(DRAFT)
+
+  aiItinerary Json?     // Full Claude-generated itinerary object
+  userNotes   String?
+  isPublic    Boolean   @default(false)
+  shareToken  String?   @unique
+
+  days        TripDay[]
+  flights     TripFlight[]
+  hotels      TripHotel[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("trips")
+}
+
+enum TripStatus {
+  DRAFT
+  PLANNED
+  BOOKED
+  COMPLETED
+}
+
+model TripDay {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  dayNumber   Int
+  date        DateTime
+  title       String
+  activities  Json[]    // Array of activity objects
+  notes       String?
+
+  @@map("trip_days")
+}
+
+model TripFlight {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  type        FlightType
+  airline     String
+  flightNum   String?
+  origin      String
+  destination String
+  departure   DateTime
+  arrival     DateTime
+  duration    Int       // minutes
+  stops       Int       @default(0)
+  price       Float
+  currency    String    @default("USD")
+  cabinClass  String    @default("economy")
+  bookingUrl  String?
+  serpData    Json?     // raw SerpAPI response
+
+  @@map("trip_flights")
+}
+
+enum FlightType {
+  OUTBOUND
+  RETURN
+}
+
+model TripHotel {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  name        String
+  address     String
+  city        String
+  stars       Int?
+  rating      Float?
+  pricePerNight Float
+  totalPrice  Float
+  currency    String    @default("USD")
+  checkIn     DateTime
+  checkOut    DateTime
+  imageUrl    String?
+  bookingUrl  String    // Booking.com affiliate link
+  bookingData Json?     // raw Booking.com response
+
+  @@map("trip_hotels")
+}
+
+model SavedFlight {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@map("saved_flights")
+}
+
+model SavedHotel {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@map("saved_hotels")
+}
