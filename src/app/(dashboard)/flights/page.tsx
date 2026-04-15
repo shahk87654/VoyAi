@@ -74,7 +74,7 @@ export default function FlightsPage() {
       setFlights(data.flights || [])
       
       if (!data.flights?.length) {
-        toast.info('No flights found for your search')
+        toast.error('No flights found for your search')
       } else {
         toast.success(`Found ${data.flights.length} flights`)
       }
