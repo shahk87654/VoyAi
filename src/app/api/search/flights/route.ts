@@ -9,7 +9,7 @@ const schema = z.object({
   destination: z.string().length(3),
   departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   returnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  adults: z.number().min(1).max(9).default(1),
+  adults: z.coerce.number().min(1).max(9).default(1),
   cabinClass: z
     .enum(['economy', 'premium_economy', 'business', 'first'])
     .default('economy'),

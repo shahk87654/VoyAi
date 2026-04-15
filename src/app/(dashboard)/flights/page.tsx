@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plane, TrendingDown, Calendar, MapPin, Users, ChevronDown, Zap, Sparkles, Loader } from 'lucide-react'
+import { Plane, TrendingDown, Calendar, MapPin, Users, ChevronDown, Zap, Sparkles, Loader, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -13,6 +13,16 @@ export default function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showSearch, setShowSearch] = useState(false)
+  
+  // Search form state
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [departDate, setDepartDate] = useState('')
+  const [returnDate, setReturnDate] = useState('')
+  const [passengers, setPassengers] = useState('1')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchPerformed, setSearchPerformed] = useState(false)
 
   useEffect(() => {
     const fetchCheapestFlights = async () => {
@@ -32,8 +42,50 @@ export default function FlightsPage() {
       }
     }
 
-    fetchCheapestFlights()
-  }, [sortBy])
+    // Only fetch cheapest flights if no search has been performed
+    if (!searchPerformed) {
+      fetchCheapestFlights()
+    }
+  }, [sortBy, searchPerformed])
+
+  const handleFlightSearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!from || !to || !departDate) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setSearchLoading(true)
+      setError(null)
+      setSearchPerformed(true)
+      
+      const params = new URLSearchParams({
+        origin: from,
+        destination: to,
+        departureDate: departDate,
+        ...(returnDate && { returnDate }),
+        adults: passengers,
+      })
+      
+      const res = await fetch(`/api/search/flights?${params}`)
+      if (!res.ok) throw new Error('Failed to search flights')
+      const data = await res.json()
+      setFlights(data.flights || [])
+      
+      if (!data.flights?.length) {
+        toast.info('No flights found for your search')
+      } else {
+        toast.success(`Found ${data.flights.length} flights`)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to search flights'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setSearchLoading(false)
+    }
+  }
 
   const handleBooking = (flight: Flight) => {
     const bookingData = {
@@ -79,45 +131,160 @@ export default function FlightsPage() {
             <div className="p-3 bg-blue-500/20 rounded-xl">
               <Plane className="w-8 h-8 text-blue-400" />
             </div>
-            <div>
-              <p className="text-blue-400 text-sm font-semibold uppercase tracking-wider">✈️ Cheapest Flights Today</p>
+            <div className="flex-1">
+              <p className="text-blue-400 text-sm font-semibold uppercase tracking-wider">✈️ {searchPerformed ? 'Flight Search Results' : 'Cheapest Flights Today'}</p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-[var(--color-text)]">
-                Find Amazing Deals
+                {searchPerformed ? 'Your Search Results' : 'Find Amazing Deals'}
               </h1>
             </div>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-400 hover:bg-blue-500/30 transition-all flex items-center gap-2 whitespace-nowrap"
+            >
+              <Search className="w-4 h-4" />
+              Search
+            </button>
           </div>
           <p className="text-sm sm:text-base text-[var(--color-text-muted)] max-w-2xl">
-            Discover the cheapest flights across popular routes. Updated in real-time to show you incredible savings.
+            {searchPerformed
+              ? 'Browse flights matching your search criteria'
+              : 'Discover the cheapest flights across popular routes. Updated in real-time to show you incredible savings.'}
           </p>
         </div>
       </div>
 
-      {/* Sorting Options */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div>
-          <p className="text-sm text-[var(--color-text-muted)] mb-3 sm:mb-0">Sort by:</p>
-          <div className="flex gap-2 flex-wrap">
-            {(['price', 'savings', 'date'] as const).map((option) => (
+      {/* Search Form */}
+      {showSearch && (
+        <div className="rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface)] p-6 sm:p-8">
+          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-6">Search Flights</h3>
+          <form onSubmit={handleFlightSearch} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* From */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">From (IATA Code)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., LAX"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value.toUpperCase())}
+                  maxLength={3}
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--color-input)] border border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* To */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">To (IATA Code)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., MIA"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value.toUpperCase())}
+                  maxLength={3}
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--color-input)] border border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Depart Date */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Depart</label>
+                <input
+                  type="date"
+                  value={departDate}
+                  onChange={(e) => setDepartDate(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--color-input)] border border-[var(--color-border)] text-[var(--color-text)] focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Return Date */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Return (Optional)</label>
+                <input
+                  type="date"
+                  value={returnDate}
+                  onChange={(e) => setReturnDate(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--color-input)] border border-[var(--color-border)] text-[var(--color-text)] focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Passengers */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Passengers</label>
+                <select
+                  value={passengers}
+                  onChange={(e) => setPassengers(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[var(--color-input)] border border-[var(--color-border)] text-[var(--color-text)] focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                >
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? 'Passenger' : 'Passengers'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
               <button
-                key={option}
-                onClick={() => setSortBy(option)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  sortBy === option
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] hover:border-blue-500/50'
-                }`}
+                type="button"
+                onClick={() => {
+                  setShowSearch(false)
+                  setSearchPerformed(false)
+                }}
+                className="px-6 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-all"
               >
-                {option === 'price' && '💰 Lowest Price'}
-                {option === 'savings' && '📉 Most Savings'}
-                {option === 'date' && '📅 Soonest'}
+                Cancel
               </button>
-            ))}
+              <button
+                type="submit"
+                disabled={searchLoading}
+                className="px-6 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {searchLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    Search Flights
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Sorting Options */}
+      {!searchPerformed && (
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <p className="text-sm text-[var(--color-text-muted)] mb-3 sm:mb-0">Sort by:</p>
+            <div className="flex gap-2 flex-wrap">
+              {(['price', 'savings', 'date'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setSortBy(option)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    sortBy === option
+                      ? 'bg-blue-500 text-white shadow-lg'
+                      : 'bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] hover:border-blue-500/50'
+                  }`}
+                >
+                  {option === 'price' && '💰 Lowest Price'}
+                  {option === 'savings' && '📉 Most Savings'}
+                  {option === 'date' && '📅 Soonest'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-sm text-[var(--color-text-muted)]">
+            {loading ? 'Loading...' : `Showing ${flights.length} deals`}
           </div>
         </div>
-        <div className="text-sm text-[var(--color-text-muted)]">
-          {loading ? 'Loading...' : `Showing ${flights.length} deals`}
-        </div>
-      </div>
+      )}
 
       {/* Error State */}
       {error && (
@@ -128,12 +295,14 @@ export default function FlightsPage() {
       )}
 
       {/* Loading State */}
-      {loading && (
+      {(loading || searchLoading) && (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4">
             </div>
-            <p className="text-[var(--color-text-muted)]">Searching for cheapest flights...</p>
+            <p className="text-[var(--color-text-muted)]">
+              {searchLoading ? 'Searching flights...' : 'Searching for cheapest flights...'}
+            </p>
           </div>
         </div>
       )}
@@ -211,20 +380,31 @@ export default function FlightsPage() {
       )}
 
       {/* Empty State */}
-      {!loading && flights.length === 0 && !error && (
+      {!loading && !searchLoading && flights.length === 0 && !error && (
         <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-sm p-8 sm:p-12 text-center">
           <div className="flex flex-col items-center gap-4">
             <Plane className="w-16 h-16 text-blue-400/50" />
             <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">Set up SerpAPI to see live flights</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">
+                {searchPerformed ? 'No flights found' : 'Set up SerpAPI to see live flights'}
+              </h3>
               <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                To enable real-time flight search, add your SerpAPI key to <code className="bg-black/20 px-2 py-1 rounded">.env.local</code>
+                {searchPerformed
+                  ? 'Try adjusting your search criteria and searching again'
+                  : 'To enable real-time flight search, add your SerpAPI key to '}
+                {!searchPerformed && <code className="bg-black/20 px-2 py-1 rounded">.env.local</code>}
               </p>
-              <ol className="text-sm text-[var(--color-text-muted)] text-left inline-block">
-                <li>1. Get a free API key from <a href="https://serpapi.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">serpapi.com</a></li>
-                <li>2. Add <code className="bg-black/20 px-2 py-1 rounded">SERPAPI_KEY=your_key</code> to .env.local</li>
-                <li>3. Restart the dev server</li>
-              </ol>
+              {!searchPerformed && (
+                <ol className="text-sm text-[var(--color-text-muted)] text-left inline-block">
+                  <li>1. Get a free API key from{' '}
+                    <a href="https://serpapi.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                      serpapi.com
+                    </a>
+                  </li>
+                  <li>2. Add <code className="bg-black/20 px-2 py-1 rounded">SERPAPI_KEY=your_key</code> to .env.local</li>
+                  <li>3. Restart the dev server</li>
+                </ol>
+              )}
             </div>
           </div>
         </div>

@@ -7,7 +7,9 @@ import { PlannerChat } from '@/components/ai/PlannerChat'
 import { ItineraryView } from '@/components/trip/ItineraryView'
 import { useTripStore } from '@/store/tripStore'
 import { GeneratedItinerary } from '@/types/ai'
-import { Loader2, Download } from 'lucide-react'
+import { Flight } from '@/types/flight'
+import { Hotel } from '@/types/hotel'
+import { Loader2, Download, MapPin, DollarSign, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function TripDetailPage({
@@ -18,6 +20,10 @@ export default function TripDetailPage({
   const [tripId, setTripId] = useState<string | null>(null)
   const [trip, setTrip] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [flights, setFlights] = useState<Flight[]>([])
+  const [hotels, setHotels] = useState<Hotel[]>([])
+  const [loadingFlights, setLoadingFlights] = useState(false)
+  const [loadingHotels, setLoadingHotels] = useState(false)
   const itinerary = useTripStore((s) => s.itinerary)
   const setItinerary = useTripStore((s) => s.setItinerary)
 
@@ -43,6 +49,60 @@ export default function TripDetailPage({
 
     loadTrip()
   }, [params, setItinerary])
+
+  useEffect(() => {
+    if (!trip) return
+
+    // Fetch flights for the trip
+    const fetchFlights = async () => {
+      setLoadingFlights(true)
+      try {
+        const params = new URLSearchParams({
+          origin: trip.origin,
+          destination: trip.destination,
+          departureDate: trip.startDate.split('T')[0],
+          ...(trip.endDate && { returnDate: trip.endDate.split('T')[0] }),
+          adults: trip.travelers?.toString() || '1',
+        })
+        const res = await fetch(`/api/search/flights?${params}`)
+        if (res.ok) {
+          const data = await res.json()
+          setFlights(data.flights || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch flights:', error)
+      } finally {
+        setLoadingFlights(false)
+      }
+    }
+
+    // Fetch hotels for the trip
+    const fetchHotels = async () => {
+      setLoadingHotels(true)
+      try {
+        const checkOut = new Date(trip.endDate)
+        checkOut.setDate(checkOut.getDate() + 1) // Checkout next day
+        const params = new URLSearchParams({
+          city: trip.destination,
+          checkIn: trip.startDate.split('T')[0],
+          checkOut: checkOut.toISOString().split('T')[0],
+          adults: trip.travelers?.toString() || '1',
+        })
+        const res = await fetch(`/api/search/hotels?${params}`)
+        if (res.ok) {
+          const data = await res.json()
+          setHotels(data.hotels || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch hotels:', error)
+      } finally {
+        setLoadingHotels(false)
+      }
+    }
+
+    fetchFlights()
+    fetchHotels()
+  }, [trip])
 
   const handleSaveItinerary = async () => {
     if (!tripId || !itinerary) return
@@ -141,15 +201,102 @@ export default function TripDetailPage({
         )}
 
         <TabsContent value="flights" className="mt-6">
-          <div className="text-muted-foreground">
-            Flight search coming soon
-          </div>
+          {loadingFlights ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : flights.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {flights.map((flight) => (
+                <div
+                  key={flight.id}
+                  className="p-6 border rounded-lg hover:shadow-lg transition-all"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg">
+                        {flight.originCode} → {flight.destinationCode}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{flight.airline}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-600">${flight.price}</p>
+                      <p className="text-xs text-muted-foreground">{flight.currency}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm mb-4">
+                    <p>
+                      <span className="text-muted-foreground">Departure:</span> {new Date(flight.departure).toLocaleString()}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Arrival:</span> {new Date(flight.arrival).toLocaleString()}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Duration:</span> {Math.floor(flight.durationMinutes / 60)}h {flight.durationMinutes % 60}m
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Stops:</span> {flight.stops === 0 ? 'Nonstop' : `${flight.stops} stop${flight.stops !== 1 ? 's' : ''}`}
+                    </p>
+                  </div>
+                  <Button className="w-full" variant="default">Book Flight</Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No flights found for your trip dates and destinations.
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="hotels" className="mt-6">
-          <div className="text-muted-foreground">
-            Hotel search coming soon
-          </div>
+          {loadingHotels ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : hotels.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {hotels.map((hotel) => (
+                <div
+                  key={hotel.id}
+                  className="p-6 border rounded-lg hover:shadow-lg transition-all"
+                >
+                  <div className="mb-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-lg">{hotel.name}</h3>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-semibold">{hotel.rating}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                      <MapPin className="w-4 h-4" />
+                      {hotel.address}, {hotel.city}
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm mb-4">
+                    <p>
+                      <span className="text-muted-foreground">Price per night:</span> <span className="font-semibold">${hotel.pricePerNight}</span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Total:</span> <span className="font-bold">${hotel.totalPrice}</span>
+                    </p>
+                    {hotel.breakfastIncluded && (
+                      <p className="text-green-600">✓ Breakfast included</p>
+                    )}
+                    {hotel.freeCancellation && (
+                      <p className="text-green-600">✓ Free cancellation</p>
+                    )}
+                  </div>
+                  <Button className="w-full" variant="default">Book Hotel</Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No hotels found for your trip dates and destination.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
