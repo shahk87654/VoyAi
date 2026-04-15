@@ -11,7 +11,7 @@ function getPopularRoutes(): FlightSearchParams[] {
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
   return [
-    { origin: 'LAX', destination: 'NYC', departureDate: formatDate(nextWeek), adults: 1 },
+    { origin: 'LAX', destination: 'JFK', departureDate: formatDate(nextWeek), adults: 1 },
     { origin: 'LAX', destination: 'MIA', departureDate: formatDate(nextWeek), adults: 1 },
     { origin: 'LAX', destination: 'ORD', departureDate: formatDate(nextWeek), adults: 1 },
     { origin: 'LAX', destination: 'BOS', departureDate: formatDate(nextWeek), adults: 1 },

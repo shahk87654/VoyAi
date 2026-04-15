@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ArrowRight, Clock, Wallet, MapPin, Navigation2, Calendar, Users } from 'lucide-react'
+import { Sparkles, ArrowRight, Clock, Wallet, MapPin, Navigation2, Calendar, Users, Loader } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Card } from '@/components/ui/card'
 
@@ -58,6 +58,8 @@ export default function TripBuilderPage() {
     }
 
     setLoading(true)
+    const loadingToast = toast.loading('Generating your perfect itinerary with AI...')
+    
     try {
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,12 +74,105 @@ export default function TripBuilderPage() {
         return
       }
 
-      // Save trip to database (when schema is available)
-      // For now, redirect to trips page
-      toast.success('Trip created successfully!')
-      router.push('/dashboard/trips')
+      // Calculate end date based on duration
+      const startDate = new Date(formData.startDate)
+      const endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + formData.days)
+
+      // Call AI planning endpoint
+      const aiResponse = await fetch('/api/ai/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: formData.destination,
+          origin: 'San Francisco',
+          startDate: formData.startDate,
+          endDate: endDate.toISOString().split('T')[0],
+          travelers: formData.travelers,
+          budget: formData.budget,
+          style: formData.interests,
+        }),
+      })
+
+      if (!aiResponse.ok) {
+        const error = await aiResponse.json()
+        console.error('AI API Error:', aiResponse.status, error)
+        throw new Error(error.error || error.details || 'Failed to generate itinerary')
+      }
+
+      // Read the streaming response
+      const reader = aiResponse.body?.getReader()
+      const decoder = new TextDecoder()
+      let itineraryText = ''
+      
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') continue
+              try {
+                const parsed = JSON.parse(data)
+                itineraryText += parsed.text || ''
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
+      }
+
+      // Extract JSON from the response text
+      let itinerary = {}
+      try {
+        const jsonMatch = itineraryText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          itinerary = JSON.parse(jsonMatch[0])
+        }
+      } catch (e) {
+        console.error('Failed to parse itinerary JSON:', e)
+      }
+
+      // Save trip with generated itinerary
+      const tripResponse = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${formData.destination} Trip`,
+          destination: formData.destination,
+          origin: 'San Francisco',
+          startDate: formData.startDate,
+          endDate: endDate.toISOString().split('T')[0],
+          travelers: formData.travelers,
+          budget: formData.budget,
+          style: formData.interests,
+          aiItinerary: itinerary,
+        }),
+      })
+
+      if (!tripResponse.ok) {
+        throw new Error('Failed to save trip')
+      }
+
+      const { trip } = await tripResponse.json()
+      
+      toast.dismiss(loadingToast)
+      toast.success('Trip created! Redirecting...')
+      
+      // Redirect to the new trip
+      setTimeout(() => {
+        router.push(`/dashboard/trips/${trip.id}`)
+      }, 1000)
     } catch (error) {
-      toast.error('Failed to create trip')
+      toast.dismiss(loadingToast)
+      const message = error instanceof Error ? error.message : 'Failed to create trip'
+      toast.error(message)
       console.error(error)
     } finally {
       setLoading(false)

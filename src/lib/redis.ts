@@ -9,6 +9,11 @@ const mockRedis = {
   set: async () => null,
   setex: async () => null,
   del: async () => null,
+  evalsha: async () => null,
+  eval: async () => null,
+  script: {
+    load: async () => null,
+  },
 } as unknown as Redis
 
 let redisClient: Redis

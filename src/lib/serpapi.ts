@@ -16,12 +16,12 @@ export async function searchFlights(params: FlightSearchParams): Promise<Flight[
     departure_id: params.origin,
     arrival_id: params.destination,
     outbound_date: params.departureDate,
+    type: params.returnDate ? '1' : '2',
     currency: params.currency ?? 'USD',
     hl: 'en',
     adults: params.adults.toString(),
     ...(params.returnDate && {
       return_date: params.returnDate,
-      type: '1',
     }),
     ...(params.cabinClass && {
       travel_class: getCabinCode(params.cabinClass),
@@ -29,7 +29,13 @@ export async function searchFlights(params: FlightSearchParams): Promise<Flight[
   })
 
   const res = await fetch(`${BASE_URL}?${searchParams}`)
-  if (!res.ok) throw new Error(`SerpAPI error: ${res.status}`)
+  if (!res.ok) {
+    const errorBody = await res.text()
+    console.error(`SerpAPI error ${res.status} for route ${params.origin}→${params.destination}`)
+    console.error(`Request URL: ${BASE_URL}?${searchParams}`)
+    console.error(`Response: ${errorBody}`)
+    throw new Error(`SerpAPI error: ${res.status}`)
+  }
 
   const data = await res.json()
   const flights = parseSerpFlights(data)

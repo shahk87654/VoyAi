@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { Plane, TrendingDown, Calendar, MapPin, Users, ChevronDown, Zap, Sparkles, Loader } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { Flight } from '@/types/flight'
 
 export default function FlightsPage() {
+  const router = useRouter()
   const [sortBy, setSortBy] = useState<'price' | 'savings' | 'date'>('price')
   const [flights, setFlights] = useState<Flight[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,7 +36,23 @@ export default function FlightsPage() {
   }, [sortBy])
 
   const handleBooking = (flight: Flight) => {
-    toast.success(`Booking ${flight.originCode} → ${flight.destinationCode} for $${flight.price}!`)
+    const bookingData = {
+      type: 'flight',
+      price: flight.price,
+      currency: flight.currency,
+      origin: flight.origin,
+      originCode: flight.originCode,
+      destination: flight.destination,
+      destinationCode: flight.destinationCode,
+      departure: flight.departure,
+      arrival: flight.arrival,
+      duration: flight.durationMinutes,
+      stops: flight.stops,
+      airline: flight.airline,
+    }
+    
+    const query = encodeURIComponent(JSON.stringify(bookingData))
+    router.push(`/booking?booking=${query}`)
   }
 
   const formatTime = (dateString: string) => {

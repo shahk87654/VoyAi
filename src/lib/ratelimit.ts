@@ -4,26 +4,34 @@ import { redis } from './redis'
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
-const isRedisAvailable =
-  redisUrl && redisToken && redisUrl.startsWith('https')
+const isRedisConfigured =
+  redisUrl && redisToken && redisUrl.startsWith('https') && !redisUrl.includes('...')
 
-// Create a mock limiter for development
-const mockLimiter = {
-  limit: async () => ({ success: true, limit: 100, remaining: 100 }),
-}
+// Create a safe mock limiter for development
+const createMockLimiter = () => ({
+  limit: async (key: string) => ({
+    success: true,
+    limit: 1000,
+    remaining: 1000,
+    reset: new Date(Date.now() + 3600000),
+    pending: Promise.resolve(),
+  }),
+  resetKey: async (key: string) => undefined,
+  resetAll: async () => undefined,
+})
 
-export const aiRatelimit = isRedisAvailable
+export const aiRatelimit = isRedisConfigured
   ? new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(10, '1 h'),
       analytics: true,
     })
-  : (mockLimiter as any)
+  : createMockLimiter()
 
-export const searchRatelimit = isRedisAvailable
+export const searchRatelimit = isRedisConfigured
   ? new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(30, '1 m'),
       analytics: true,
     })
-  : (mockLimiter as any)
+  : createMockLimiter()

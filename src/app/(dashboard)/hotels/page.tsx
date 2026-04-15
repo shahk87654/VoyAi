@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Hotel, Star, MapPin, Users, Wifi, Coffee, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -95,6 +96,7 @@ const HOTEL_DEALS: HotelDeal[] = [
 ]
 
 export default function HotelsPage() {
+  const router = useRouter()
   const [sortBy, setSortBy] = useState<'price' | 'discount' | 'rating'>('price')
   const [selectedCity, setSelectedCity] = useState<string>('all')
 
@@ -118,7 +120,16 @@ export default function HotelsPage() {
   })
 
   const handleBook = (hotel: HotelDeal) => {
-    toast.success(`Booking ${hotel.name} for $${hotel.dealPrice}/night!`)
+    const bookingData = {
+      type: 'hotel',
+      price: hotel.dealPrice,
+      currency: 'USD',
+      hotelName: hotel.name,
+      rating: hotel.rating,
+    }
+    
+    const query = encodeURIComponent(JSON.stringify(bookingData))
+    router.push(`/booking?booking=${query}`)
   }
 
   return (
