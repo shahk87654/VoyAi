@@ -74,12 +74,10 @@ export async function POST(req: NextRequest) {
           await prisma.user.update({
             where: { id: dbUser.id },
             data: {
-              aiPlansThisMonth: 0,
               tripsThisMonth: 0,
               lastResetAt: new Date(),
             },
           })
-          dbUser.aiPlansThisMonth = 0
           dbUser.tripsThisMonth = 0
           dbUser.lastResetAt = new Date()
         } catch (e) {
@@ -88,7 +86,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if user can generate AI plan
-      const canGenerate = canGenerateAIPlan(dbUser.plan, dbUser.aiPlansThisMonth)
+      const canGenerate = canGenerateAIPlan(dbUser.plan, dbUser.tripsThisMonth)
       if (!canGenerate) {
         return NextResponse.json(
           {
@@ -203,10 +201,10 @@ Return a complete JSON itinerary matching the GeneratedItinerary TypeScript inte
         try {
           await prisma.user.update({
             where: { supabaseId: user.id },
-            data: { aiPlansThisMonth: { increment: 1 } },
+            data: { tripsThisMonth: { increment: 1 } },
           })
         } catch (e) {
-          console.warn('Failed to update AI plan counter in fallback:', e instanceof Error ? e.message : e)
+          console.warn('Failed to update trip counter in fallback:', e instanceof Error ? e.message : e)
         }
       }
 

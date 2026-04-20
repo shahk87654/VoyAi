@@ -41,13 +41,11 @@ export async function POST(request: NextRequest) {
       now.getMonth() !== lastReset.getMonth() ||
       now.getFullYear() !== lastReset.getFullYear()
 
-    let currentCount = dbUser.aiPlansThisMonth
-    let currentTripsCount = dbUser.tripsThisMonth
+    let currentCount = dbUser.tripsThisMonth
     let lastResetDate = dbUser.lastResetAt
 
     if (shouldReset) {
       currentCount = 0
-      currentTripsCount = 0
       lastResetDate = now
     }
 
@@ -69,11 +67,11 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Increment AI plan count
+      // Increment trip count
       await prisma.user.update({
         where: { id: dbUser.id },
         data: {
-          aiPlansThisMonth: currentCount + 1,
+          tripsThisMonth: currentCount + 1,
           lastResetAt: lastResetDate,
         },
       })
@@ -89,33 +87,25 @@ export async function POST(request: NextRequest) {
     if (type === 'trip_save') {
       const limit = PLAN_FEATURES[dbUser.plan].maxSavedTrips
       
-      // Check monthly trip count limit
-      if (limit !== -1 && currentTripsCount >= limit) {
+      // Check trips count, not monthly count
+      const tripsCount = dbUser.trips.length
+
+      if (limit !== -1 && tripsCount >= limit) {
         return NextResponse.json(
           {
-            error: 'Trip save limit reached this month',
+            error: 'Trip save limit reached',
             plan: dbUser.plan,
             limit,
-            used: currentTripsCount,
-            resetDate: getNextResetDate(lastResetDate),
+            used: tripsCount,
           },
           { status: 429 }
         )
       }
 
-      // Increment trip save count
-      await prisma.user.update({
-        where: { id: dbUser.id },
-        data: {
-          tripsThisMonth: currentTripsCount + 1,
-          lastResetAt: lastResetDate,
-        },
-      })
-
       return NextResponse.json({
         success: true,
         type: 'trip_save',
-        newCount: currentTripsCount + 1,
+        currentCount: tripsCount,
         limit,
       })
     }

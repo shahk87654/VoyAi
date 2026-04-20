@@ -17,7 +17,6 @@ model User {
   plan          Plan      @default(FREE)
   stripeCustomerId String? @unique
   stripeSubId   String?
-  aiPlansThisMonth Int     @default(0)
   tripsThisMonth Int      @default(0)
   lastResetAt   DateTime  @default(now())
   createdAt     DateTime  @default(now())
