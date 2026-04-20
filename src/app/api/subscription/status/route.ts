@@ -37,10 +37,12 @@ export async function GET(request: NextRequest) {
       await prisma.user.update({
         where: { id: dbUser.id },
         data: {
+          aiPlansThisMonth: 0,
           tripsThisMonth: 0,
           lastResetAt: now,
         },
       })
+      dbUser.aiPlansThisMonth = 0
       dbUser.tripsThisMonth = 0
       dbUser.lastResetAt = now
     }
@@ -50,8 +52,8 @@ export async function GET(request: NextRequest) {
       email: dbUser.email,
       name: dbUser.name,
       stripeCustomerId: dbUser.stripeCustomerId,
-      aiPlansThisMonth: dbUser.tripsThisMonth,
-      savedTripsCount: dbUser.trips.length,
+      aiPlansThisMonth: dbUser.aiPlansThisMonth,
+      savedTripsCount: dbUser.tripsThisMonth,
       lastResetAt: dbUser.lastResetAt,
     })
   } catch (error) {

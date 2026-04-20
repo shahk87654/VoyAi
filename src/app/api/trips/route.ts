@@ -53,10 +53,12 @@ export async function POST(req: NextRequest) {
           await prisma.user.update({
             where: { id: dbUser.id },
             data: {
+              aiPlansThisMonth: 0,
               tripsThisMonth: 0,
               lastResetAt: new Date(),
             },
           })
+          dbUser.aiPlansThisMonth = 0
           dbUser.tripsThisMonth = 0
           dbUser.lastResetAt = new Date()
         } catch (e) {
