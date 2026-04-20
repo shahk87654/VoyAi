@@ -80,20 +80,18 @@ export async function POST(request: NextRequest) {
       overlays += `/path-${width}+${color}(${pathStr})`
     }
 
-    // Build options
+    // Build options according to StaticImageOptions interface
     const options: any = {
-      position: {
-        center: [validated.lng, validated.lat],
-        zoom: validated.zoom,
-        bearing: validated.bearing || 0,
-        pitch: validated.pitch || 0,
-      },
-      size: {
-        width: validated.width,
-        height: validated.height,
-      },
-      style: validated.style,
-      overlays: overlays || undefined,
+      username: 'mapbox',
+      styleId: validated.style === 'streets' ? 'streets-v12' : `${validated.style}-v12`,
+      coordinates: [validated.lng, validated.lat] as [number, number],
+      zoom: validated.zoom,
+      width: validated.width,
+      height: validated.height,
+      bearing: validated.bearing || 0,
+      pitch: validated.pitch || 0,
+      markers: validated.markers,
+      retina: false,
     }
 
     // Call Mapbox
@@ -166,12 +164,13 @@ export async function GET(request: NextRequest) {
 
     // Get static image
     const imageUrl = await service.staticImage({
-      position: {
-        center: [parseFloat(lng), parseFloat(lat)],
-        zoom,
-      },
-      size: { width, height },
-      style,
+      username: 'mapbox',
+      styleId: style === 'streets' ? 'streets-v12' : `${style}-v12`,
+      coordinates: [parseFloat(lng), parseFloat(lat)],
+      zoom,
+      width,
+      height,
+      retina: false,
     })
 
     // Return the image URL

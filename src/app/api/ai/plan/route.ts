@@ -3,6 +3,7 @@ import { anthropic, PLANNER_SYSTEM_PROMPT } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { aiRatelimit } from '@/lib/ratelimit'
+import { canGenerateAIPlan, shouldResetMonthlyLimit } from '@/lib/permissions'
 import { TripPlanRequest } from '@/types/ai'
 import { z } from 'zod'
 
@@ -59,21 +60,41 @@ export async function POST(req: NextRequest) {
       dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id },
       })
-      console.log('Database user:', dbUser?.id)
+      console.log('Database user:', dbUser?.id, 'Plan:', dbUser?.plan)
     } catch (dbError) {
       console.warn('Database lookup failed (continuing anyway):', dbError instanceof Error ? dbError.message : dbError)
       // Continue without database user info - this is optional for MVP
     }
 
-    // Plan limit check for free users
-    if (dbUser?.plan === 'FREE' && (dbUser.tripsThisMonth ?? 0) >= 3) {
-      console.log('Step 4 failed: Free plan limit reached')
-      return NextResponse.json(
-        {
-          error: 'Free plan limit reached. Upgrade to Pro for unlimited trips.',
-        },
-        { status: 403 }
-      )
+    // Check subscription limit for generating AI plans
+    if (dbUser) {
+      // Auto-reset monthly limits if needed
+      if (shouldResetMonthlyLimit(dbUser.lastResetAt)) {
+        try {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: {
+              tripsThisMonth: 0,
+              lastResetAt: new Date(),
+            },
+          })
+          dbUser.tripsThisMonth = 0
+          dbUser.lastResetAt = new Date()
+        } catch (e) {
+          console.warn('Failed to reset monthly limit:', e)
+        }
+      }
+
+      // Check if user can generate AI plan
+      const canGenerate = canGenerateAIPlan(dbUser.plan, dbUser.tripsThisMonth)
+      if (!canGenerate) {
+        return NextResponse.json(
+          {
+            error: `You've reached your monthly AI planning limit for your ${dbUser.plan} plan. Upgrade to Pro for unlimited plans.`,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     console.log('Step 5: Calculate trip duration and create prompt')

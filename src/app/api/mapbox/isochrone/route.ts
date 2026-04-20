@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Build options
     const options = {
-      contours: validated.contours.join(','),
+      contours: validated.contours,
       polygons: validated.polygons,
     }
 
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
       [parseFloat(lng), parseFloat(lat)],
       profile,
       {
-        contours: contours.join(','),
+        contours: contours,
         polygons: true,
       }
     )

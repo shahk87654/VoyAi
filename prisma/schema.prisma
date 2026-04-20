@@ -25,6 +25,10 @@ model User {
   trips         Trip[]
   savedFlights  SavedFlight[]
   savedHotels   SavedHotel[]
+  tripCollaborations TripCollaborator[] @relation("tripCollaborations")
+  sharedTrips   TripShare[] @relation("sharedTrips")
+  ownedTeams    Team[]    @relation("teamOwner")
+  teamMemberships TeamMember[] @relation("teamMemberships")
 
   @@map("users")
 }
@@ -60,6 +64,7 @@ model Trip {
   hotels      TripHotel[]
   shares      TripShare[]
   chatMessages TripChatMessage[]
+  collaborators TripCollaborator[] @relation("collaborators")
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -195,12 +200,15 @@ model TripShare {
   id          String    @id @default(cuid())
   tripId      String
   trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("sharedTrips", fields: [userId], references: [id], onDelete: Cascade)
   shareToken  String    @unique
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([shareToken])
+  @@index([userId])
   @@map("trip_shares")
 }
 
@@ -214,4 +222,47 @@ model TripChatMessage {
 
   @@index([tripId])
   @@map("trip_chat_messages")
+}
+
+model TripCollaborator {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation("collaborators", fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("tripCollaborations", fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("viewer") // "viewer" or "editor"
+  addedAt     DateTime  @default(now())
+
+  @@unique([tripId, userId])
+  @@index([userId])
+  @@map("trip_collaborators")
+}
+
+model Team {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User      @relation("teamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  members     TeamMember[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id          String    @id @default(cuid())
+  teamId      String
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("teamMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("member") // "owner", "admin", "member"
+  joinedAt    DateTime  @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
 }
